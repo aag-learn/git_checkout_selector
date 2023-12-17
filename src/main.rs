@@ -11,26 +11,21 @@ use git2::{BranchType, Repository};
 // one.
 
 fn main() {
-    let repo = match Repository::open("./") {
-        Ok(repo) => repo,
-        Err(e) => panic!("failed to open: {}", e),
-    };
+    let repo = init_repo();
+
+    run_interface(&repo);
+}
+
+// Let's put the callback in a separate function to keep it clean,
+// but it's not required.
+fn show_next_window(siv: &mut Cursive, city: &str) {
+    siv.pop_layer();
+    let text = format!("let's checkout out {city}");
+    siv.add_layer(Dialog::around(TextView::new(text)).button("Quit", |s| s.quit()));
+}
+
+fn get_branch_names_from_repo(repo: &Repository) -> Vec<String> {
     let local_branch_option: Option<BranchType> = Some(BranchType::Local);
-
-    let local_branches = match repo.branches(local_branch_option) {
-        Ok(branches) => branches,
-        Err(e) => panic!("failed to open: {}", e),
-    };
-    for result in local_branches {
-        match result {
-            Ok((b, _btype)) => match b.name() {
-                Ok(n) => println!("{}", n.unwrap()),
-                Err(e) => panic!("error! {}", e),
-            },
-            Err(e) => panic!("error! {}", e),
-        }
-    }
-
     let local_branches = match repo.branches(local_branch_option) {
         Ok(branches) => branches,
         Err(e) => panic!("failed to get branches: {}", e),
@@ -45,7 +40,11 @@ fn main() {
             Err(e) => panic!("error! {}", e),
         };
     }
+    branch_names
+}
 
+fn run_interface(repo: &Repository) {
+    let branch_names: Vec<String> = get_branch_names_from_repo(&repo);
     let mut select: SelectView = SelectView::new()
         // Center the text horizontally
         .h_align(HAlign::Center)
@@ -79,10 +78,11 @@ fn main() {
     siv.run();
 }
 
-// Let's put the callback in a separate function to keep it clean,
-// but it's not required.
-fn show_next_window(siv: &mut Cursive, city: &str) {
-    siv.pop_layer();
-    let text = format!("let's checkout out {city}");
-    siv.add_layer(Dialog::around(TextView::new(text)).button("Quit", |s| s.quit()));
+fn init_repo() -> Repository {
+    let repo = match Repository::open("./") {
+        Ok(repo) => repo,
+        Err(e) => panic!("failed to open: {}", e),
+    };
+
+    repo
 }
