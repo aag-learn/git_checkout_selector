@@ -79,10 +79,8 @@ fn run_interface(repo: &Repository) {
 }
 
 fn init_repo() -> Repository {
-    let repo = match Repository::open("./") {
+    match Repository::open("./") {
         Ok(repo) => repo,
         Err(e) => panic!("failed to open: {}", e),
-    };
-
-    repo
+    }
 }
