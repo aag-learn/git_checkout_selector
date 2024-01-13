@@ -10,8 +10,6 @@ pub mod ui;
 
 fn main() {
     let repo = LocalRepository::new();
-    let app = UI {
-        branch_names: repo.branch_names(),
-    };
+    let mut app = UI::from_branch_names(repo.branch_names());
     app.start();
 }
