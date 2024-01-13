@@ -8,3 +8,7 @@ edition = "2021"
 [dependencies]
 cursive = "0.20"
 git2 = "0.18.1"
+
+[[bin]]
+name = "checkout"
+path = "src/checkout.rs"
