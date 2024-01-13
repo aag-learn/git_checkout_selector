@@ -1,4 +1,4 @@
-use git2::{BranchType, Repository};
+use git2::{build::CheckoutBuilder, BranchType, Repository};
 
 pub struct LocalRepository {
     repo: git2::Repository,
@@ -25,6 +25,23 @@ impl LocalRepository {
             };
         }
         branch_names
+    }
+
+    pub fn checkout(&self, branch_name: &str) -> Result<(), git2::Error> {
+        println!("Changing head to {}", branch_name);
+        let mut reference = String::from("refs/heads/");
+        reference.push_str(branch_name);
+        let treeish = self.repo.revparse_single(branch_name);
+        match treeish {
+            Ok(t) => {
+                let mut builder = CheckoutBuilder::new();
+                match self.repo.checkout_tree(&t, Some(&mut builder)) {
+                    Ok(_) => self.repo.set_head(&reference),
+                    Err(e) => Err(e),
+                }
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

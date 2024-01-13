@@ -3,8 +3,11 @@ use cursive::views::{Dialog, EditView, LinearLayout, NamedView, SelectView, Text
 use cursive::Cursive;
 use cursive::{traits::*, CursiveRunnable};
 
+use crate::local_repository::LocalRepository;
+
 pub struct UI {
     pub branch_names: Vec<String>,
+    pub repository: LocalRepository,
     siv: CursiveRunnable,
 }
 
@@ -12,6 +15,13 @@ impl UI {
     pub fn from_branch_names(branch_names: Vec<String>) -> Self {
         Self {
             branch_names,
+            ..Default::default()
+        }
+    }
+
+    pub fn from_repository(repository: LocalRepository) -> Self {
+        Self {
+            repository,
             ..Default::default()
         }
     }
@@ -37,20 +47,41 @@ impl UI {
             .h_align(HAlign::Center)
             // Use keyboard to jump to the pressed letters
             .autojump();
-
-        select.add_all_str(self.branch_names.clone());
+        select.add_all_str(self.repository.branch_names());
 
         // Sets the callback for when "Enter" is pressed.
-        select.set_on_submit(show_next_window);
+        select.set_on_submit(|siv, branch_name| {
+            match LocalRepository::default().checkout(branch_name) {
+                Ok(_) => {
+                    show_message_and_quit(siv, "Todo OK!!");
+                }
+                Err(e) => show_message_and_quit(siv, e.message()),
+            }
+        });
         select.with_name("branches")
     }
 
     fn edit_view(&self) -> NamedView<EditView> {
+        let branch_names = self.repository.branch_names();
         EditView::new()
             // update results every time the query changes
-            //.on_edit(on_edit)
+            .on_edit(move |siv, text, _cursor| {
+                let found_branch_names: Vec<String> = branch_names
+                    .iter()
+                    .filter(|&name| {
+                        name.to_lowercase()
+                            .contains(&String::from(text).to_lowercase())
+                    })
+                    .cloned()
+                    .collect();
+
+                siv.call_on_name("branches", |v: &mut SelectView| {
+                    v.clear();
+                    v.add_all_str(found_branch_names);
+                });
+            })
             // submit the focused (first) item of the matches
-            //.on_submit(on_submit)
+            //.on_submit()
             .with_name("query")
     }
 }
@@ -59,15 +90,12 @@ impl Default for UI {
     fn default() -> Self {
         Self {
             branch_names: vec![],
+            repository: LocalRepository::default(),
             siv: cursive::default(),
         }
     }
 }
-
-// Let's put the callback in a separate function to keep it clean,
-// but it's not required.
-fn show_next_window(siv: &mut Cursive, city: &str) {
+fn show_message_and_quit(siv: &mut Cursive, message: &str) {
     siv.pop_layer();
-    let text = format!("let's checkout out {city}");
-    siv.add_layer(Dialog::around(TextView::new(text)).button("Quit", |s| s.quit()));
+    siv.add_layer(Dialog::around(TextView::new(message)).button("Quit", |s| s.quit()));
 }
